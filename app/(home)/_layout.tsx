@@ -55,15 +55,15 @@ export default function HomeLayout() {
         }}
       />
       <Tabs.Screen
-        name="progress"
+        name="social"
         options={{
-          tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={25} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="users" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="bmi"
+        name="progress"
         options={{
-          tabBarIcon: ({ color }) => <FontAwesome5 name="weight" size={25} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={25} color={color} />,
         }}
       />
     </Tabs>

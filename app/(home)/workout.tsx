@@ -90,6 +90,16 @@ export default function WorkoutTab() {
             </Pressable>
 
             <Pressable
+              onPress={() => router.push('/workout/templates')}
+              className="mb-3 flex-row items-center rounded-xl bg-purple-900 p-4">
+              <FontAwesome name="bookmark" size={20} color="white" />
+              <View className="ml-4">
+                <Text className="text-base font-bold text-white">My Templates</Text>
+                <Text className="text-sm text-purple-300">Saved workouts, tap to start</Text>
+              </View>
+            </Pressable>
+
+            <Pressable
               onPress={() => router.push('/workout/history')}
               className="mb-3 flex-row items-center rounded-xl bg-gray-800 p-4">
               <FontAwesome name="history" size={20} color="white" />

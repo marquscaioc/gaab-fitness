@@ -58,7 +58,9 @@ export default function WorkoutHistoryScreen() {
               ) || 0;
               const date = new Date(item.started_at);
               return (
-                <Pressable className="mb-3 rounded-xl bg-gray-800 p-4">
+                <Pressable
+                  onPress={() => router.push(`/workout/session/${item.id}`)}
+                  className="mb-3 rounded-xl bg-gray-800 p-4">
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-semibold text-white">
                       {item.name || 'Workout'}

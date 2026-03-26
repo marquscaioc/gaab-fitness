@@ -61,20 +61,33 @@ export default function ActiveSessionScreen() {
           text: 'Finish',
           onPress: async () => {
             setSaving(true);
+            const duration = elapsedSeconds;
             const finishedSession = store.finishSession();
+            let savedSessionId = '';
             if (finishedSession && authSession?.user?.id) {
               try {
-                await saveCompletedSession(
+                const saved = await saveCompletedSession(
                   authSession.user.id,
                   finishedSession,
-                  elapsedSeconds
+                  duration
                 );
+                savedSessionId = saved?.id || finishedSession.id;
               } catch (err) {
                 console.error('Failed to save session, will retry later:', err);
+                savedSessionId = finishedSession.id;
               }
             }
             setSaving(false);
-            router.replace('/(home)/workout');
+            router.replace({
+              pathname: '/workout/session/complete',
+              params: {
+                sessionId: savedSessionId,
+                duration: String(duration),
+                sets: String(completedCount),
+                exercises: String(exercises.length),
+                volume: String(volume.toFixed(0)),
+              },
+            });
           },
         },
       ]

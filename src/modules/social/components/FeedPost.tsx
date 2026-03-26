@@ -1,9 +1,11 @@
 import { FontAwesome } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { View, Text, Pressable } from 'react-native';
 
 interface FeedPostProps {
   post: {
     id: string;
+    user_id: string;
     post_type: string;
     content: string | null;
     created_at: string;
@@ -33,7 +35,9 @@ export default function FeedPost({ post, onReact }: FeedPostProps) {
   return (
     <View className="mb-3 rounded-xl bg-gray-800 p-4">
       {/* Header */}
-      <View className="flex-row items-center">
+      <Pressable
+        onPress={() => router.push(`/user/${post.user_id}`)}
+        className="flex-row items-center">
         <View className="h-10 w-10 items-center justify-center rounded-full bg-green-800">
           <Text className="text-base font-bold text-white">
             {(profile?.username || '?').charAt(0).toUpperCase()}
@@ -45,7 +49,7 @@ export default function FeedPost({ post, onReact }: FeedPostProps) {
           </Text>
           <Text className="text-xs text-gray-500">{timeAgo}</Text>
         </View>
-      </View>
+      </Pressable>
 
       {/* Type badge */}
       {typeInfo.label && (

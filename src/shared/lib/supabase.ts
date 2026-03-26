@@ -1,32 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
 
 import type { Database } from '../types/database';
 
-// Build a storage adapter that works on both web and native
-function createStorageAdapter() {
-  if (Platform.OS === 'web') {
-    return {
-      getItem: (key: string): string | null => {
-        try { return localStorage.getItem(key); } catch { return null; }
-      },
-      setItem: (key: string, value: string): void => {
-        try { localStorage.setItem(key, value); } catch {}
-      },
-      removeItem: (key: string): void => {
-        try { localStorage.removeItem(key); } catch {}
-      },
-    };
-  }
+const isWeb = typeof window !== 'undefined' && typeof localStorage !== 'undefined' && !('ReactNativeWebView' in window);
 
-  // Native: use MMKV
-  const { MMKV } = require('react-native-mmkv');
-  const mmkv = new MMKV({ id: 'supabase-storage' });
-  return {
-    getItem: (key: string): string | null => mmkv.getString(key) ?? null,
-    setItem: (key: string, value: string): void => mmkv.set(key, value),
-    removeItem: (key: string): void => mmkv.delete(key),
-  };
+const webAdapter = {
+  getItem: (key: string): string | null => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  setItem: (key: string, value: string): void => {
+    try { localStorage.setItem(key, value); } catch {}
+  },
+  removeItem: (key: string): void => {
+    try { localStorage.removeItem(key); } catch {}
+  },
+};
+
+function createStorageAdapter() {
+  if (isWeb) return webAdapter;
+
+  try {
+    const MMKV = require('react-native-mmkv').MMKV;
+    const mmkv = new MMKV({ id: 'supabase-storage' });
+    return {
+      getItem: (key: string): string | null => mmkv.getString(key) ?? null,
+      setItem: (key: string, value: string): void => mmkv.set(key, value),
+      removeItem: (key: string): void => mmkv.delete(key),
+    };
+  } catch {
+    return webAdapter;
+  }
 }
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';

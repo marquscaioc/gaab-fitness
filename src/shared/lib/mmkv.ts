@@ -1,35 +1,32 @@
-import { Platform } from 'react-native';
+// Web-safe storage abstraction
+// On web: uses localStorage
+// On native: uses MMKV (loaded via platform-specific file)
 
-// MMKV is not available on web -- fallback to localStorage
-let storageBackend: {
-  getString(key: string): string | undefined;
-  set(key: string, value: string): void;
-  delete(key: string): void;
+const isWeb = typeof window !== 'undefined' && typeof localStorage !== 'undefined' && !('ReactNativeWebView' in window);
+
+const webStorage = {
+  getString(key: string): string | undefined {
+    try { return localStorage.getItem(key) ?? undefined; } catch { return undefined; }
+  },
+  set(key: string, value: string): void {
+    try { localStorage.setItem(key, value); } catch {}
+  },
+  delete(key: string): void {
+    try { localStorage.removeItem(key); } catch {}
+  },
 };
 
-if (Platform.OS === 'web') {
-  storageBackend = {
-    getString(key: string) {
-      try {
-        return localStorage.getItem(key) ?? undefined;
-      } catch {
-        return undefined;
-      }
-    },
-    set(key: string, value: string) {
-      try {
-        localStorage.setItem(key, value);
-      } catch {}
-    },
-    delete(key: string) {
-      try {
-        localStorage.removeItem(key);
-      } catch {}
-    },
-  };
-} else {
-  const { MMKV } = require('react-native-mmkv');
-  storageBackend = new MMKV({ id: 'gaab-app' });
+let storageBackend = webStorage;
+
+if (!isWeb) {
+  try {
+    // This will only succeed on native platforms
+    const MMKV = require('react-native-mmkv').MMKV;
+    storageBackend = new MMKV({ id: 'gaab-app' });
+  } catch {
+    // Fallback to web storage if MMKV fails
+    storageBackend = webStorage;
+  }
 }
 
 export const storage = storageBackend;

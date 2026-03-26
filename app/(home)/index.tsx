@@ -1,4 +1,3 @@
-import { useClerk, useUser } from '@clerk/clerk-expo';
 import { FontAwesome } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import {
@@ -12,31 +11,43 @@ import {
   StatusBar,
 } from 'react-native';
 
-import DailyQuote from '~/components/DailyQuote';
 import MainNutritionTrack from '~/components/MainNutritionTrack';
 import MainWaterIntake from '~/components/MainWaterIntake';
 import StepCounter from '~/components/StepCounter';
 import StreakTrack from '~/components/StreakTrack';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { useAuth } from '~/src/modules/auth/hooks/useAuth';
 
 export default function HomePage() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { session, profile, isLoading } = useSession();
+  const { signOut } = useAuth();
 
-  if (!user) {
+  if (isLoading) return null;
+
+  if (!session) {
     return <Redirect href="/(auth)/sign-in" />;
   }
+
+  const displayName = profile?.display_name || profile?.username || session.user.email || 'User';
+  const avatarUrl = profile?.avatar_url;
 
   return (
     <SafeAreaView
       className="flex-1 bg-gray-900"
       style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
       <View className="border-b-hairline flex-row items-center gap-5 border-gray-300 p-4">
-        {user?.imageUrl && (
-          <Image source={{ uri: user.imageUrl }} className="h-16 w-16 rounded-full" />
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} className="h-16 w-16 rounded-full" />
+        ) : (
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-green-700">
+            <Text className="text-2xl font-bold text-white">
+              {displayName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
         )}
         <View className="flex-1">
           <Text className="text-lg text-white">Welcome Back!</Text>
-          <Text className="text-xl font-bold text-white">{user?.fullName}</Text>
+          <Text className="text-xl font-bold text-white">{displayName}</Text>
         </View>
         <Pressable className="flex-row gap-5 p-1">
           <FontAwesome
@@ -49,14 +60,10 @@ export default function HomePage() {
         </Pressable>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} className="mb-20 pb-4">
-        {/* Calendar for streak */}
         <StreakTrack />
         <View className="border-b-hairline border-t-hairline m-4 flex-row items-center justify-around border-gray-300 p-2">
-          {/* Calorie track circle */}
           <MainNutritionTrack />
-          {/* Step track */}
           <StepCounter />
-          {/* Water Intake home */}
           <MainWaterIntake
             label="Water"
             color="#3498db"
@@ -64,8 +71,6 @@ export default function HomePage() {
             goal={2500}
           />
         </View>
-        {/* Daily quote */}
-        <DailyQuote />
       </ScrollView>
       <StatusBar barStyle="light-content" />
     </SafeAreaView>

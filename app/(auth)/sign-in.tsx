@@ -1,4 +1,3 @@
-import { useOAuth, useSignIn } from '@clerk/clerk-expo';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -13,74 +12,64 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
-export default function Page() {
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const { startOAuthFlow: googleAuth } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: appleAuth } = useOAuth({ strategy: 'oauth_apple' });
+import { useAuth } from '~/src/modules/auth/hooks/useAuth';
+
+export default function SignInPage() {
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth();
   const router = useRouter();
-  const [emailAddress, setEmailAddress] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [emailAddress, setEmailAddress] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const image = require('../../assets/onboarding/logo.png');
 
-  const onSignInPress = React.useCallback(async () => {
-    if (!isLoaded) return;
-
-    try {
-      const signInAttempt = await signIn.create({
-        identifier: emailAddress,
-        password,
-      });
-
-      if (signInAttempt.status === 'complete') {
-        await setActive({ session: signInAttempt.createdSessionId });
-        router.replace('/');
-      } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
-        setError('Invalid email or password. Please try again.');
-      }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+  const onSignInPress = async () => {
+    if (!emailAddress || !password) {
+      setError('Please enter email and password.');
+      return;
     }
-  }, [isLoaded, emailAddress, password]);
-
-  const handleGoogleAuth = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
-      const { createdSessionId } = await googleAuth();
-
-      if (createdSessionId) {
-        if (setActive) {
-          await setActive({ session: createdSessionId });
-        }
-        router.push('/(home)');
+      const { error: signInError } = await signIn(emailAddress, password);
+      if (signInError) {
+        setError(signInError.message);
       } else {
-        throw new Error('Google sign-in failed to create a session.');
+        router.replace('/(home)');
       }
-    } catch (error) {
-      console.error('Error while logging in with Google', error);
+    } catch (err: any) {
+      setError(err.message || 'Sign in failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setError('');
+    try {
+      const { error: oauthError } = await signInWithGoogle();
+      if (oauthError) {
+        setError(oauthError.message);
+      }
+    } catch (err: any) {
       setError('Google sign-in failed. Please try again.');
     }
-  }, [googleAuth, setActive, router]);
+  };
 
-  const handleAppleAuth = React.useCallback(async () => {
+  const handleAppleAuth = async () => {
+    setError('');
     try {
-      const { createdSessionId } = await appleAuth();
-
-      if (createdSessionId) {
-        if (setActive) {
-          await setActive({ session: createdSessionId });
-        }
-        router.push('/(home)');
-      } else {
-        throw new Error('Apple sign-in failed to create a session.');
+      const { error: oauthError } = await signInWithApple();
+      if (oauthError) {
+        setError(oauthError.message);
       }
-    } catch (error) {
-      console.error('Error while logging in with Apple', error);
+    } catch (err: any) {
       setError('Apple sign-in failed. Please try again.');
     }
-  }, [appleAuth, setActive, router]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,15 +79,16 @@ export default function Page() {
             source={image}
             style={{ width: 200, height: 200, borderRadius: 30, alignSelf: 'center', margin: 5 }}
           />
-          <Text style={styles.title}>Fitly</Text>
+          <Text style={styles.title}>GAAB</Text>
           <Text style={styles.inputText}>Email</Text>
           <TextInput
             style={styles.textInput}
             autoCapitalize="none"
+            keyboardType="email-address"
             value={emailAddress}
             placeholder="email@email.com"
             placeholderTextColor="gainsboro"
-            onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
+            onChangeText={setEmailAddress}
           />
           <Text style={styles.inputText}>Password</Text>
           <TextInput
@@ -107,12 +97,16 @@ export default function Page() {
             placeholder="**********"
             placeholderTextColor="gainsboro"
             secureTextEntry
-            onChangeText={(password) => setPassword(password)}
+            onChangeText={setPassword}
           />
-          {error && <Text style={styles.errorMessage}>{error}</Text>}
+          {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
           <View style={styles.signupContainer}>
-            <Pressable style={styles.signupButton} onPress={onSignInPress}>
-              <Text style={styles.signupText}>Sign in</Text>
+            <Pressable style={styles.signupButton} onPress={onSignInPress} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.signupText}>Sign in</Text>
+              )}
             </Pressable>
           </View>
           <Pressable style={styles.googleButton} onPress={handleGoogleAuth}>

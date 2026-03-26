@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { supabase } from '../utils/supabase';
+import { supabase } from '../src/shared/lib/supabase';
 
 import { Workout, Exercise } from '~/types/types';
 

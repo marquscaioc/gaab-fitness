@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Fitly",
-    "slug": "Fitly",
-    "version": "1.0.0",
-    "scheme": "Fitly",
+    "name": "GAAB",
+    "slug": "gaab",
+    "version": "0.1.0",
+    "scheme": "gaab",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -25,16 +25,16 @@
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#111827"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anilyavas.Fitly",
+      "bundleIdentifier": "com.gaab.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -42,14 +42,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#111827"
       },
-      "package": "com.anilyavas.Fitly"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "439f0a79-e79e-4ef5-abe7-7ec80ac361d3"
-      }
+      "package": "com.gaab.app"
     }
   }
 }

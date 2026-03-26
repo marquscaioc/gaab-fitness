@@ -103,7 +103,7 @@ export default function StreakTrack() {
           arrowColor: '#e5e7eb',
           textDisabledColor: '#6b7280',
         }}
-        dayComponent={({ date, state }: { date: any; state: any }) => (
+        dayComponent={({ date, state }: { date?: any; state?: any }) => (
           <Pressable onPress={() => handleDayPress(date!)}>
             <View style={{ alignItems: 'center', justifyContent: 'center', height: 30, width: 30 }}>
               {markedDates[date?.dateString] ? (

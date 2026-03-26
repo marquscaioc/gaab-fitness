@@ -1,4 +1,3 @@
-import { useUser } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -7,21 +6,21 @@ import {
   SafeAreaView,
   Alert,
   StyleSheet,
-  Image,
   TextInput,
   Pressable,
 } from 'react-native';
 
 import { Button } from '~/components/Button';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { supabase } from '~/src/shared/lib/supabase';
 
 export default function Profile() {
-  const { user } = useUser();
-  const [currentPassword, setCurrentPassword] = useState('');
+  const { session, profile } = useSession();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleChangePassword = async () => {
-    if (!currentPassword || !password || !confirmPassword) {
+    if (!password || !confirmPassword) {
       Alert.alert('Error', 'Please fill out all password fields.');
       return;
     }
@@ -30,30 +29,39 @@ export default function Profile() {
       return;
     }
     try {
-      await user?.updatePassword({
-        currentPassword,
-        newPassword: password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       Alert.alert('Success', 'Password updated successfully!');
-      setCurrentPassword('');
       setPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      console.error(error);
       Alert.alert('Error', error.message || 'Failed to update password.');
     }
   };
 
   const handleDeleteUser = async () => {
-    try {
-      await user?.delete();
-      Alert.alert('Account Deleted', 'Your account has been deleted successfully.');
-      router.push('/(auth)/sign-in');
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Error', error.message || 'Failed to delete account.');
-    }
+    Alert.alert(
+      'Delete Account',
+      'This action is irreversible. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Sign out -- actual deletion requires a server-side admin call
+              await supabase.auth.signOut();
+              router.replace('/(auth)/sign-in');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete account.');
+            }
+          },
+        },
+      ]
+    );
   };
+
   return (
     <View className="flex-1 bg-gray-900">
       <SafeAreaView>
@@ -64,23 +72,22 @@ export default function Profile() {
           </Pressable>
         </View>
         <View className="p-4">
-          {user?.imageUrl && <Image source={{ uri: user?.imageUrl }} style={styles.image} />}
+          <View className="mb-4 items-center">
+            <View className="h-20 w-20 items-center justify-center rounded-full bg-green-700">
+              <Text className="text-3xl font-bold text-white">
+                {(profile?.username || session?.user?.email || 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          </View>
           <View className="border-hairline border-gray-300 p-2">
             <View style={styles.infoContainer}>
-              <Text style={styles.infoTitle}>Email Address:</Text>
-              <Text style={styles.infoText}>{user?.primaryEmailAddress?.emailAddress}</Text>
+              <Text style={styles.infoTitle}>Email:</Text>
+              <Text style={styles.infoText}>{session?.user?.email}</Text>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.infoTitle}>Current Password:</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter Current Password..."
-                value={currentPassword}
-                secureTextEntry
-                onChangeText={setCurrentPassword}
-                placeholderTextColor="white"
-              />
+              <Text style={styles.infoTitle}>Username:</Text>
+              <Text style={styles.infoText}>{profile?.username || 'Not set'}</Text>
             </View>
 
             <View style={styles.infoContainer}>
@@ -91,19 +98,19 @@ export default function Profile() {
                 value={password}
                 secureTextEntry
                 onChangeText={setPassword}
-                placeholderTextColor="white"
+                placeholderTextColor="gray"
               />
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.infoTitle}>Confirm Password:</Text>
+              <Text style={styles.infoTitle}>Confirm:</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Confirm New Password..."
                 value={confirmPassword}
                 secureTextEntry
                 onChangeText={setConfirmPassword}
-                placeholderTextColor="white"
+                placeholderTextColor="gray"
               />
             </View>
           </View>
@@ -113,7 +120,7 @@ export default function Profile() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <Button title="Delete User" onPress={handleDeleteUser} className="mx-5 bg-red-500" />
+            <Button title="Delete Account" onPress={handleDeleteUser} className="mx-5 bg-red-500" />
           </View>
         </View>
       </SafeAreaView>
@@ -122,23 +129,6 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 5,
-  },
-  image: {
-    width: 75,
-    height: 75,
-    borderRadius: 30,
-    alignSelf: 'center',
-    margin: 10,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: 'gainsboro',
-    padding: 20,
-  },
   infoContainer: {
     alignItems: 'center',
     flexDirection: 'row',

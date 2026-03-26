@@ -17,7 +17,7 @@ export default function OnboardingPage() {
       <SafeAreaView
         className="flex-1"
         style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
-        <Text className="text-center text-3xl font-bold text-green-600">Fitly</Text>
+        <Text className="text-center text-3xl font-bold text-green-600">GAAB</Text>
         <Swiper loop={false} showsPagination dotColor="white">
           <View className="items-center justify-center gap-7 p-10">
             <Image

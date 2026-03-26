@@ -55,9 +55,9 @@ export default function HomeLayout() {
         }}
       />
       <Tabs.Screen
-        name="videos"
+        name="progress"
         options={{
-          tabBarIcon: ({ color }) => <FontAwesome6 name="youtube" size={25} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={25} color={color} />,
         }}
       />
       <Tabs.Screen

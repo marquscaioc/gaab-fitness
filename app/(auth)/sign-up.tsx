@@ -1,92 +1,56 @@
-import { useSignUp } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as React from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   TextInput,
   StyleSheet,
   SafeAreaView,
-  Dimensions,
   View,
   Pressable,
   Platform,
   KeyboardAvoidingView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
+import { useAuth } from '~/src/modules/auth/hooks/useAuth';
+
 export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp();
+  const { signUp } = useAuth();
   const router = useRouter();
 
-  const [emailAddress, setEmailAddress] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [pendingVerification, setPendingVerification] = React.useState(false);
-  const [code, setCode] = React.useState('');
+  const [username, setUsername] = useState('');
+  const [emailAddress, setEmailAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const image = require('../../assets/onboarding/logo.png');
 
   const onSignUpPress = async () => {
-    if (!isLoaded) return;
-
-    try {
-      await signUp.create({
-        emailAddress,
-        password,
-      });
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-
-      setPendingVerification(true);
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+    if (!emailAddress || !password || !username) {
+      setError('Please fill all fields.');
+      return;
     }
-  };
-
-  const onVerifyPress = async () => {
-    if (!isLoaded) return;
-
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setLoading(true);
+    setError('');
     try {
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      });
-
-      if (signUpAttempt.status === 'complete') {
-        await setActive({ session: signUpAttempt.createdSessionId });
-        router.replace('/');
+      const { error: signUpError } = await signUp(emailAddress, password, username);
+      if (signUpError) {
+        setError(signUpError.message);
       } else {
-        console.error(JSON.stringify(signUpAttempt, null, 2));
+        router.replace('/(home)');
       }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+    } catch (err: any) {
+      setError(err.message || 'Sign up failed.');
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (pendingVerification) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Verify your email</Text>
-        <TextInput
-          style={[styles.textInput, { width: Dimensions.get('window').width / 2 }]}
-          value={code}
-          placeholder="Verification code"
-          placeholderTextColor="#888"
-          onChangeText={(code) => setCode(code)}
-          keyboardType="numeric"
-        />
-        <Pressable
-          onPress={onVerifyPress}
-          style={{
-            backgroundColor: '#00BCD4',
-            paddingVertical: 14,
-            paddingHorizontal: 28,
-            borderRadius: 10,
-            marginTop: 20,
-          }}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>Verify</Text>
-        </Pressable>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -96,15 +60,25 @@ export default function SignUpScreen() {
             source={image}
             style={{ width: 200, height: 200, borderRadius: 30, alignSelf: 'center', margin: 5 }}
           />
-          <Text style={styles.title}>Fitly</Text>
+          <Text style={styles.title}>GAAB</Text>
+          <Text style={styles.inputText}>Username</Text>
+          <TextInput
+            style={styles.textInput}
+            autoCapitalize="none"
+            value={username}
+            placeholder="Your username"
+            placeholderTextColor="gainsboro"
+            onChangeText={setUsername}
+          />
           <Text style={styles.inputText}>Email</Text>
           <TextInput
             style={styles.textInput}
             autoCapitalize="none"
+            keyboardType="email-address"
             value={emailAddress}
             placeholder="email@email.com"
             placeholderTextColor="gainsboro"
-            onChangeText={(email) => setEmailAddress(email)}
+            onChangeText={setEmailAddress}
           />
           <Text style={styles.inputText}>Password</Text>
           <TextInput
@@ -113,14 +87,19 @@ export default function SignUpScreen() {
             placeholder="**********"
             placeholderTextColor="gainsboro"
             secureTextEntry
-            onChangeText={(password) => setPassword(password)}
+            onChangeText={setPassword}
           />
-          {password.length < 8 && (
+          {password.length > 0 && password.length < 8 && (
             <Text style={styles.warningMessage}>Password must be minimum of 8 characters!</Text>
           )}
+          {error ? <Text style={styles.warningMessage}>{error}</Text> : null}
           <View style={styles.button}>
-            <Pressable onPress={onSignUpPress} style={styles.buttonContainer}>
-              <Text style={styles.buttonText}>Continue</Text>
+            <Pressable onPress={onSignUpPress} style={styles.buttonContainer} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
             </Pressable>
           </View>
           <View style={styles.button}>
@@ -137,6 +116,7 @@ export default function SignUpScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,10 +1,13 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { Redirect, Stack } from 'expo-router';
 
-export default function AuthLayout() {
-  const { isSignedIn } = useAuth();
+import { useSession } from '~/src/modules/auth/hooks/useSession';
 
-  if (isSignedIn) {
+export default function AuthLayout() {
+  const { session, isLoading } = useSession();
+
+  if (isLoading) return null;
+
+  if (session) {
     return <Redirect href="/(home)" />;
   }
 

@@ -58,7 +58,11 @@ export default function CreateWorkout({
   const handleSaveWorkout = async () => {
     if (!name.trim() || exercises.length === 0) return;
 
-    await addWorkout(userId, { name, category, description, instructions }, exercises);
+    await addWorkout(
+      userId,
+      { name, category, description, instructions },
+      exercises.map((e) => ({ ...e, workout_id: '' }))
+    );
     onClose();
   };
 

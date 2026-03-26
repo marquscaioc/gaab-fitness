@@ -1,24 +1,19 @@
 import '../global.css';
-import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { tokenCache } from '~/utils/cache';
+import { queryClient } from '~/src/shared/lib/query-client';
+import { AuthProvider } from '~/src/modules/auth/hooks/useSession';
 
 export default function Layout() {
-  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-
-  if (!publishableKey) {
-    throw new Error('Missing Publishable key.Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!');
-  }
-
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
           <Slot />
         </GestureHandlerRootView>
-      </ClerkLoaded>
-    </ClerkProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

@@ -16,9 +16,15 @@ export default function WorkoutHistoryScreen() {
   useEffect(() => {
     if (!session?.user?.id) return;
     (async () => {
-      const { data } = await getWorkoutHistory(session.user.id, 50);
-      setSessions(data || []);
-      setLoading(false);
+      try {
+        const { data, error } = await getWorkoutHistory(session.user.id, 50);
+        if (error) console.warn('Failed to load history:', error.message);
+        setSessions(data || []);
+      } catch (err) {
+        console.warn('History fetch failed:', err);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [session?.user?.id]);
 

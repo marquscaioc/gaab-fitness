@@ -51,10 +51,10 @@ export default function HomePage() {
         </View>
         <Pressable className="flex-row gap-5 p-1">
           <FontAwesome
-            name="user"
-            size={30}
+            name="cog"
+            size={28}
             color="gray"
-            onPress={() => router.push('../profile')}
+            onPress={() => router.push('/settings')}
           />
           <FontAwesome name="sign-out" size={30} color="red" onPress={() => signOut()} />
         </Pressable>

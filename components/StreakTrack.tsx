@@ -31,7 +31,7 @@ export default function StreakTrack() {
       const { data } = await supabase
         .from('workout_sessions')
         .select('started_at')
-        .eq('user_id', session!.user.id)
+        .eq('user_id', session?.user?.id ?? '')
         .gte('started_at', threeMonthsAgo.toISOString())
         .order('started_at', { ascending: true });
 

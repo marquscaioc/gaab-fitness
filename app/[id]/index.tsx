@@ -1,66 +1,100 @@
 import { Entypo } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import workouts from '../../assets/data/preWorkouts.json';
-
-import { useWorkoutStore } from '~/store/useWorkoutStore';
+import { supabase } from '~/src/shared/lib/supabase';
 
 export default function WorkoutDetails() {
-  const { id } = useLocalSearchParams();
-  const { workouts: userWorkouts } = useWorkoutStore();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [template, setTemplate] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  let selectedWorkout = workouts.find((workout) => workout.id.toString() === id);
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('workout_templates')
+        .select('*, workout_template_exercises(*, exercises(*))')
+        .eq('id', id)
+        .single();
+      setTemplate(data);
+      setLoading(false);
+    })();
+  }, [id]);
 
-  if (!selectedWorkout) {
-    selectedWorkout = userWorkouts.find((workout) => workout.id.toString() === id);
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-900">
+        <ActivityIndicator size="large" color="#22c55e" />
+      </View>
+    );
   }
 
-  if (!selectedWorkout) {
+  if (!template) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-900 p-4">
+      <SafeAreaView className="flex-1 items-center justify-center bg-gray-900">
         <Text className="text-center text-white">Workout not found</Text>
+        <Pressable onPress={() => router.back()} className="mt-4">
+          <Text className="text-green-400">Go back</Text>
+        </Pressable>
       </SafeAreaView>
     );
   }
 
+  const exercises = template.workout_template_exercises || [];
+
   return (
     <View className="flex-1 bg-gray-900">
-      <SafeAreaView className="p-4">
+      <SafeAreaView className="flex-1 p-4">
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Back Button */}
           <Pressable
             className="absolute right-1 top-1 z-10"
-            onPress={() => router.replace('/workout')}>
+            onPress={() => router.back()}>
             <Entypo name="cross" size={25} color="white" />
           </Pressable>
 
-          {/* Title Section */}
           <Text className="border-b border-gray-700 pb-3 text-2xl font-bold text-green-400">
-            {selectedWorkout.name}
+            {template.name}
           </Text>
-          <Text className="mt-1 text-lg font-semibold text-gray-300">
-            {selectedWorkout.category}
-          </Text>
+          {template.category && (
+            <Text className="mt-1 text-lg font-semibold text-gray-300">{template.category}</Text>
+          )}
 
-          {/* Workout Details Section */}
-          <View className="mt-4 rounded-lg bg-gray-800 p-4 shadow-md">
-            <Text className="text-md text-gray-300">🔥 {selectedWorkout.description}</Text>
-            <Text className="text-md mt-2 text-gray-300">📝 {selectedWorkout.instructions}</Text>
-          </View>
+          {template.description && (
+            <View className="mt-4 rounded-lg bg-gray-800 p-4">
+              <Text className="text-gray-300">{template.description}</Text>
+            </View>
+          )}
 
-          {/* Exercises List */}
           <View className="mt-6">
-            <Text className="text-xl font-semibold text-green-400">Exercises:</Text>
-            {selectedWorkout.exercises.map((exercise) => (
-              <View key={exercise.name} className="mt-4 gap-1 rounded-lg bg-gray-800 p-4 shadow-md">
-                <Text className="text-lg font-semibold text-white">💪 {exercise.name}</Text>
-                <Text className="mt-1 text-gray-300">- {exercise.description}</Text>
-                <Text className="text-gray-300">- {exercise.instructions}</Text>
-                <Text className="mt-2 font-bold text-green-400">Sets: {exercise.sets}</Text>
-              </View>
-            ))}
+            <Text className="text-xl font-semibold text-green-400">
+              Exercises ({exercises.length})
+            </Text>
+            {exercises
+              .sort((a: any, b: any) => a.sort_order - b.sort_order)
+              .map((te: any) => (
+                <Pressable
+                  key={te.id}
+                  onPress={() => te.exercises?.id && router.push(`/exercise/${te.exercises.id}`)}
+                  className="mt-3 rounded-lg bg-gray-800 p-4">
+                  <Text className="text-lg font-semibold capitalize text-white">
+                    {te.exercises?.name || 'Unknown exercise'}
+                  </Text>
+                  <View className="mt-2 flex-row gap-4">
+                    <Text className="text-sm text-green-400">
+                      {te.default_sets || 3} sets x {te.default_reps || 10} reps
+                    </Text>
+                    <Text className="text-sm text-gray-400">
+                      Rest: {te.rest_seconds || 90}s
+                    </Text>
+                  </View>
+                  {te.notes && (
+                    <Text className="mt-1 text-sm text-gray-500">{te.notes}</Text>
+                  )}
+                </Pressable>
+              ))}
           </View>
         </ScrollView>
       </SafeAreaView>

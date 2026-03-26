@@ -1,69 +1,43 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
 
 import CircularProgress from './ProgressCircle';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { useTodayMeals } from '~/src/modules/tracking/hooks/useMeals';
 
 export default function MainNutritionTrack() {
-  const [goal, setGoal] = useState(10000);
-  const [calories, setCalories] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const fetchProgressData = async () => {
-    setLoading(true);
-    try {
-      const storedData = await AsyncStorage.getItem('meals');
-      const storedGoal = await AsyncStorage.getItem('calorieGoal');
-      const dataArray = storedData ? JSON.parse(storedData) : [];
-      const goalValue = storedGoal ? JSON.parse(storedGoal) : goal;
-
-      const totalCalories = dataArray.reduce(
-        (acc: number, meal: { calories: number }) => acc + Number(meal.calories || 0),
-        0
-      );
-
-      setCalories(totalCalories);
-      setGoal(goalValue);
-    } catch (error) {
-      console.log('Error while loading data', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkForDailyReset = async () => {
-    const lastReset = await AsyncStorage.getItem('lastReset');
-    const today = new Date().toDateString();
-    if (lastReset !== today) {
-      await AsyncStorage.setItem('meals', JSON.stringify([]));
-      await AsyncStorage.setItem('lastReset', today);
-      setCalories(0);
-    }
-  };
+  const { session } = useSession();
+  const userId = session?.user?.id;
+  const { data: meals, isLoading, refetch } = useTodayMeals(userId);
 
   useFocusEffect(
     useCallback(() => {
-      fetchProgressData();
-      checkForDailyReset();
+      refetch();
     }, [])
   );
 
-  if (loading) {
+  if (isLoading) {
     return <ActivityIndicator size="large" />;
   }
+
+  const totalCalories = (meals || []).reduce(
+    (sum, meal: any) => sum + (meal.calories || 0),
+    0
+  );
+  const goal = 2500;
 
   return (
     <View>
       <CircularProgress
-        progress={calories}
+        progress={totalCalories}
         label="Calories"
         iconName="fire"
         color="#FFA500"
         goal={goal}
       />
       <Text className="text-center text-white">
-        {calories} / {goal} kcal
+        {totalCalories} / {goal} kcal
       </Text>
     </View>
   );

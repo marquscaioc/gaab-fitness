@@ -1,202 +1,123 @@
 import { FontAwesome } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View, Text, FlatList, Pressable, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { ProgressBar } from 'react-native-paper';
 
 import { Button } from './Button';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { useTodayMeals, useAddMeal, useDeleteMeal } from '~/src/modules/tracking/hooks/useMeals';
 
-type Meal = {
-  id: number;
-  name: string;
-  calories: number;
-  category: string;
-};
+const categories = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
 export default function NutritionTrack() {
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [goal, setGoal] = useState<number>(10000);
-  const [loading, setLoading] = useState(false);
-  const [mealName, setMealName] = useState<string>('');
-  const [mealCalories, setMealCalories] = useState<number>(0);
+  const { session } = useSession();
+  const userId = session?.user?.id;
+  const { data: meals, isLoading } = useTodayMeals(userId);
+  const addMealMutation = useAddMeal(userId);
+  const deleteMealMutation = useDeleteMeal(userId);
+
+  const [goal] = useState(2500);
+  const [mealName, setMealName] = useState('');
+  const [mealCalories, setMealCalories] = useState('');
   const [mealCategory, setMealCategory] = useState<string>('');
-  const [totalCalories, setTotalCalories] = useState<number>(0);
 
-  const categories = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+  const totalCalories = (meals || []).reduce((sum, meal: any) => sum + (meal.calories || 0), 0);
 
-  useEffect(() => {
-    loadNutritionData();
-    checkForDailyReset();
-  }, []);
-
-  useEffect(() => {
-    setTotalCalories(meals.reduce((sum, meal) => sum + meal.calories, 0));
-  }, [meals]);
-
-  const loadNutritionData = async () => {
-    setLoading(true);
-    try {
-      const storedMeals = await AsyncStorage.getItem('meals');
-      const storedGoal = await AsyncStorage.getItem('calorieGoal');
-      if (storedMeals) {
-        setMeals(JSON.parse(storedMeals));
-      }
-      if (storedGoal) {
-        setGoal(JSON.parse(storedGoal));
-      }
-    } catch (error) {
-      console.error('Error while loading nutrition data ', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveMeal = async () => {
+  const saveMeal = () => {
     if (!mealName || !mealCalories) return;
-    const newMeal: Meal = {
-      id: Date.now(),
+    addMealMutation.mutate({
       name: mealName,
-      calories: mealCalories,
-      category: mealCategory,
-    };
-    const updatedMeals = [...meals, newMeal];
-    setMeals(updatedMeals);
-    setTotalCalories((prevCalories) => prevCalories + newMeal.calories);
-    await AsyncStorage.setItem('meals', JSON.stringify(updatedMeals));
+      calories: parseInt(mealCalories, 10),
+      category: (mealCategory || 'snack') as any,
+    });
     setMealName('');
-    setMealCalories(0);
+    setMealCalories('');
     setMealCategory('');
   };
 
-  const deleteMeal = async (id: number) => {
-    const updatedMeals = meals.filter((meal) => meal.id !== id);
-    const deletedMeal = meals.find((meal) => meal.id === id);
-    if (deletedMeal) {
-      setTotalCalories((prevCalories) => prevCalories - deletedMeal.calories);
-    }
-    setMeals(updatedMeals);
-    await AsyncStorage.setItem('meals', JSON.stringify(updatedMeals));
+  const handleDelete = (id: string) => {
+    deleteMealMutation.mutate(id);
   };
 
-  const checkForDailyReset = async () => {
-    const lastReset = await AsyncStorage.getItem('lastReset');
-    const today = new Date().toDateString();
-    if (lastReset !== today) {
-      await AsyncStorage.setItem('meals', JSON.stringify([]));
-      await AsyncStorage.setItem('lastReset', today);
-      setMeals([]);
-      setTotalCalories(0);
-    }
-  };
-
-  const onSetGoal = async () => {
-    Alert.prompt('Set Daily Goal', 'Enter your daily calorie goal', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Set',
-        onPress: async (goal) => {
-          if (goal) {
-            setGoal(parseInt(goal, 10));
-            await AsyncStorage.setItem('calorieGoal', JSON.stringify(goal));
-          }
-        },
-      },
-    ]);
-  };
-
-  if (loading) return <ActivityIndicator size="large" />;
+  if (isLoading) return <ActivityIndicator size="large" />;
 
   return (
     <View className="flex-1 p-2">
       <View className="flex-row items-center justify-center">
         <Text className="px-4 text-xl text-white">
-          Daily Kcal Goal: {totalCalories} / {goal} kcal
+          Daily Kcal: {totalCalories} / {goal} kcal
         </Text>
-        <Pressable onPress={onSetGoal}>
-          <Text className="rounded bg-green-600/40 p-2 text-white">Change</Text>
-        </Pressable>
       </View>
       <ProgressBar
         progress={Math.min(totalCalories / goal, 1)}
         color="green"
         className="w-11/12 self-center px-2 py-4"
       />
-      {/* Meal log */}
-      <View className="m-2 gap-4 bg-gray-600 p-6">
-        <View className=" flex-row gap-3  ">
-          <View className="w-32">
-            <Text className="font-semibold text-white">Meal Name: </Text>
-          </View>
+
+      {/* Meal form */}
+      <View className="m-2 gap-4 rounded-xl bg-gray-700 p-4">
+        <View className="flex-row items-center gap-3">
+          <Text className="w-24 font-semibold text-white">Name:</Text>
           <TextInput
-            placeholderTextColor="white"
+            placeholderTextColor="#9ca3af"
             value={mealName}
             onChangeText={setMealName}
-            placeholder="e.g. Apple..."
-            className="border-b-hairline flex-1 border-gray-300 text-white"
+            placeholder="e.g. Chicken breast"
+            className="flex-1 border-b border-gray-500 pb-1 text-white"
           />
         </View>
-        <View className="flex-row gap-3">
-          <View className="w-32">
-            <Text className="font-semibold text-white">Meal Calories: </Text>
-          </View>
+        <View className="flex-row items-center gap-3">
+          <Text className="w-24 font-semibold text-white">Calories:</Text>
           <TextInput
-            placeholder="Enter calories..."
-            placeholderTextColor="white"
-            className="border-b-hairline flex-1 border-gray-300 text-white"
-            value={mealCalories ? mealCalories.toString() : ''}
-            onChangeText={(text) => {
-              const parsed = parseInt(text, 10);
-              setMealCalories(isNaN(parsed) ? 0 : parsed);
-            }}
+            placeholder="e.g. 300"
+            placeholderTextColor="#9ca3af"
+            className="flex-1 border-b border-gray-500 pb-1 text-white"
+            value={mealCalories}
+            onChangeText={setMealCalories}
             keyboardType="numeric"
           />
         </View>
-        <View className="flex-row items-center gap-3 ">
-          <View className="w-32">
-            <Text className="font-semibold text-white">Meal Category: </Text>
-          </View>
-          {categories.map((category) => (
+        <View className="flex-row flex-wrap items-center gap-2">
+          <Text className="w-24 font-semibold text-white">Category:</Text>
+          {categories.map((cat) => (
             <Pressable
-              className={`border-hairline rounded-lg ${mealCategory === category ? 'border-green-500' : 'border-white'} p-1`}
-              key={category}
-              onPress={() => setMealCategory(category)}>
-              <Text
-                className={`font-semibold ${mealCategory === category ? 'text-green-500' : 'text-white'}`}>
-                {category}
-              </Text>
+              key={cat}
+              onPress={() => setMealCategory(cat)}
+              className={`rounded-lg px-3 py-1.5 ${mealCategory === cat ? 'bg-green-600' : 'bg-gray-600'}`}>
+              <Text className="text-xs capitalize text-white">{cat}</Text>
             </Pressable>
           ))}
         </View>
       </View>
+
       <Button
         onPress={saveMeal}
         title="Add Meal"
-        className="m-6 "
+        className="m-4"
         style={{ backgroundColor: 'green' }}
       />
 
-      <Text className="p-4 text-center text-lg text-gray-400">
-        Enter your meal details to add it to your meal log. Meals and their calories are daily and
-        will reset everyday.
-      </Text>
-
-      {/* Meal display */}
-      {meals.length !== 0 && <Text className="px-4 text-xl font-bold text-green-500">Meals</Text>}
-      <FlatList
-        scrollEnabled={false}
-        data={meals}
-        renderItem={({ item }) => (
-          <View className="border-b-hairline flex-row items-center justify-between border-gray-300 p-4">
-            <Text className="w-32 text-lg text-white">{item.name}</Text>
-            <Text className="w-20 text-center text-lg text-white">{item.calories}</Text>
-            <Text className="w-24 text-lg text-white">{item.category}</Text>
-            <FontAwesome name="close" size={20} color="red" onPress={() => deleteMeal(item.id)} />
-          </View>
-        )}
-      />
+      {/* Meal list */}
+      {meals && meals.length > 0 && (
+        <>
+          <Text className="px-4 text-lg font-bold text-green-500">Today's Meals</Text>
+          <FlatList
+            scrollEnabled={false}
+            data={meals}
+            keyExtractor={(item: any) => item.id}
+            renderItem={({ item }: { item: any }) => (
+              <View className="flex-row items-center justify-between border-b border-gray-700 p-3">
+                <Text className="w-28 text-base text-white">{item.name}</Text>
+                <Text className="w-16 text-center text-base text-white">{item.calories}</Text>
+                <Text className="w-20 text-xs capitalize text-gray-400">{item.category}</Text>
+                <Pressable onPress={() => handleDelete(item.id)}>
+                  <FontAwesome name="close" size={18} color="#ef4444" />
+                </Pressable>
+              </View>
+            )}
+          />
+        </>
+      )}
     </View>
   );
 }

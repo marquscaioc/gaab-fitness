@@ -4,30 +4,33 @@ import { View, Platform, Text } from 'react-native';
 import AppleHealthKit, { HealthInputOptions, HealthKitPermissions } from 'react-native-health';
 
 import CircularProgress from './ProgressCircle';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { useUpdateMetric } from '~/src/modules/tracking/hooks/useDailyMetrics';
 
 export default function StepCounter() {
   const [steps, setSteps] = useState(0);
-  const [isAvailable, setIsAvailable] = useState(false);
   const goal = 10000;
   const progress = (steps / goal) * 100;
 
+  const { session } = useSession();
+  const userId = session?.user?.id;
+  const updateMetric = useUpdateMetric(userId);
+
+  // Sync steps to Supabase when they change significantly
+  useEffect(() => {
+    if (steps > 0 && steps % 500 === 0) {
+      updateMetric.mutate({ steps });
+    }
+  }, [steps]);
+
   useEffect(() => {
     if (Platform.OS === 'android') {
-      // Android
-      const checkAvailability = async () => {
-        const available = await Pedometer.isAvailableAsync();
-        setIsAvailable(available);
-      };
-
-      checkAvailability();
-
       const subscription = Pedometer.watchStepCount((result) => {
         setSteps(result.steps);
       });
 
       return () => subscription && subscription.remove();
     } else {
-      // iOS
       const permissions: HealthKitPermissions = {
         permissions: {
           read: [AppleHealthKit.Constants.Permissions.StepCount],
@@ -39,7 +42,7 @@ export default function StepCounter() {
         if (error) return console.log('HealthKit initialization failed:', error);
 
         const options: HealthInputOptions = {
-          startDate: new Date().toISOString(),
+          startDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
         };
 
         AppleHealthKit.getStepCount(options, (err, results) => {

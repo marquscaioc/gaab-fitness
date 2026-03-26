@@ -5,11 +5,13 @@ import { View, Text, SafeAreaView, FlatList, Pressable, Platform, StatusBar, Act
 import { useSession } from '~/src/modules/auth/hooks/useSession';
 import FeedPost from '~/src/modules/social/components/FeedPost';
 import { useFeed } from '~/src/modules/social/hooks/useFeed';
+import { useUnreadCount } from '~/src/modules/social/hooks/useNotifications';
 import { toggleReaction } from '~/src/modules/social/api/feed';
 
 export default function SocialTab() {
   const { session } = useSession();
   const { data, isLoading, fetchNextPage, hasNextPage, refetch } = useFeed();
+  const { data: unreadCount } = useUnreadCount(session?.user?.id);
 
   const posts = data?.pages.flat() || [];
 
@@ -26,9 +28,19 @@ export default function SocialTab() {
         style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
         <View className="flex-row items-center justify-between border-b border-gray-800 px-6 py-4">
           <Text className="text-2xl font-bold text-green-500">Feed</Text>
-          <Pressable onPress={() => router.push('/social/friends')}>
-            <FontAwesome name="user-plus" size={20} color="#9ca3af" />
-          </Pressable>
+          <View className="flex-row gap-4">
+            <Pressable onPress={() => router.push('/social/notifications')} className="relative">
+              <FontAwesome name="bell" size={20} color="#9ca3af" />
+              {(unreadCount || 0) > 0 && (
+                <View className="absolute -right-2 -top-1 h-4 w-4 items-center justify-center rounded-full bg-red-500">
+                  <Text className="text-[10px] font-bold text-white">{unreadCount}</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable onPress={() => router.push('/social/friends')}>
+              <FontAwesome name="user-plus" size={20} color="#9ca3af" />
+            </Pressable>
+          </View>
         </View>
 
         {isLoading ? (

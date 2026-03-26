@@ -1,119 +1,51 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { View, Alert, ActivityIndicator, useWindowDimensions, Pressable, Text } from 'react-native';
+import { useCallback } from 'react';
+import { View, ActivityIndicator, useWindowDimensions, Pressable, Text } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
 import { ProgressBar } from 'react-native-paper';
 
 import { Button } from './Button';
+import { useSession } from '~/src/modules/auth/hooks/useSession';
+import { useTodayMetrics, useUpdateMetric } from '~/src/modules/tracking/hooks/useDailyMetrics';
 
-const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAILY_GOAL = 2000;
 
 export default function WaterIntake() {
   const { width, height } = useWindowDimensions();
-  const [waterData, setWaterData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [loading, setLoading] = useState(true);
+  const { session } = useSession();
+  const userId = session?.user?.id;
+  const { data: metrics, isLoading, refetch } = useTodayMetrics(userId);
+  const updateMetric = useUpdateMetric(userId);
 
   useFocusEffect(
     useCallback(() => {
-      checkAndResetWeeklyData();
+      refetch();
     }, [])
   );
 
-  const getCurrentWeekKey = () => {
-    const today = new Date();
-    const monday = new Date(today);
-    const day = monday.getDay();
-    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
+  const todayAmount = metrics?.water_ml || 0;
 
-    const year = monday.getFullYear();
-    const weekNumber = Math.ceil(
-      ((monday.getTime() - new Date(year, 0, 1).getTime()) / 86400000 +
-        new Date(year, 0, 1).getDay() +
-        1) /
-        7
-    );
-
-    return `${year}-W${weekNumber}`;
+  const addWater = () => {
+    updateMetric.mutate({ water_ml: todayAmount + 200 });
   };
 
-  const checkAndResetWeeklyData = async () => {
-    try {
-      const storedData = await AsyncStorage.getItem('weeklyWaterIntake');
-      const storedWeekKey = await AsyncStorage.getItem('lastWeekKey');
-      const currentWeekKey = getCurrentWeekKey();
-
-      if (storedWeekKey !== currentWeekKey) {
-        const newWeekData = [0, 0, 0, 0, 0, 0, 0];
-        await AsyncStorage.setItem('weeklyWaterIntake', JSON.stringify(newWeekData));
-        await AsyncStorage.setItem('lastWeekKey', currentWeekKey);
-        setWaterData(newWeekData);
-      } else if (storedData) {
-        setWaterData(JSON.parse(storedData));
-      }
-    } catch (error) {
-      console.error('Error loading weekly data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getTodayIndex = () => {
-    const day = new Date().getDay();
-    return (day + 6) % 7; // Monday = 0, Sunday = 6
-  };
-
-  const addWaterIntake = async () => {
-    const index = getTodayIndex();
-    const newData = [...waterData];
-    newData[index] += 200;
-    setWaterData(newData);
-    await AsyncStorage.setItem('weeklyWaterIntake', JSON.stringify(newData));
-  };
-
-  const updateWaterIntake = (index: number) => {
-    Alert.prompt(
-      'Edit Water Intake',
-      `Enter new amount for ${daysOfWeek[index]}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: async (value) => {
-            const newValue = Number(value);
-            if (isNaN(newValue) || newValue < 0) {
-              Alert.alert('Invalid Input', 'Please enter a valid number.');
-              return;
-            }
-
-            const newData = [...waterData];
-            newData[index] = newValue;
-            setWaterData(newData);
-            await AsyncStorage.setItem('weeklyWaterIntake', JSON.stringify(newData));
-          },
-        },
-      ],
-      'plain-text'
-    );
-  };
-
-  const todayIndex = getTodayIndex();
-  const todayAmount = waterData[todayIndex];
-
-  if (loading) {
+  if (isLoading) {
     return <ActivityIndicator size="large" />;
   }
 
+  // Simple bar chart with just today's data as context
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const chartData = daysOfWeek.map((_, i) => (i === todayIndex ? todayAmount : 0));
+
   const data = {
     labels: daysOfWeek,
-    datasets: [{ data: waterData }],
+    datasets: [{ data: chartData }],
   };
 
   return (
     <View className="p-4">
-      {/* Daily progress for today */}
+      {/* Daily progress */}
       <View className="my-2 items-center">
         <Text className="text-xl font-semibold text-white">
           Today: {todayAmount}ml / {DAILY_GOAL}ml
@@ -125,7 +57,7 @@ export default function WaterIntake() {
         />
       </View>
 
-      {/* Weekly Chart */}
+      {/* Chart */}
       <View>
         <BarChart
           data={data}
@@ -143,26 +75,6 @@ export default function WaterIntake() {
           }}
           style={{ borderRadius: 8, alignSelf: 'center' }}
         />
-
-        {/* Tap to edit individual days */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 20,
-            width: width - 40,
-            height: height / 4,
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-          }}>
-          {waterData.map((_, index) => (
-            <Pressable
-              key={index}
-              style={{ flex: 1, height: '100%' }}
-              onPress={() => updateWaterIntake(index)}
-            />
-          ))}
-        </View>
       </View>
 
       {/* Add button */}
@@ -170,10 +82,10 @@ export default function WaterIntake() {
         title="Add Water (200ml)"
         className="m-6"
         style={{ backgroundColor: 'green' }}
-        onPress={addWaterIntake}
+        onPress={addWater}
       />
       <Text className="text-center text-sm text-gray-400">
-        Tap a bar to manually update a day’s intake. Data resets weekly.
+        Water intake is synced to your account. Track daily hydration.
       </Text>
     </View>
   );

@@ -1,5 +1,4 @@
-[project]
-id = ""
+project_id = "wfaffefgyoidsacbilwj"
 
 [api]
 port = 54321
@@ -12,9 +11,3 @@ port = 54322
 site_url = "gaab://"
 additional_redirect_urls = ["gaab://"]
 jwt_expiry = 3600
-
-[auth.external.google]
-enabled = true
-
-[auth.external.apple]
-enabled = true

@@ -14,6 +14,7 @@ import {
 
 import { useSession } from '~/src/modules/auth/hooks/useSession';
 import { updateProfile } from '~/src/modules/profile/api/profile';
+import { supabase } from '~/src/shared/lib/supabase';
 
 const FITNESS_GOALS = [
   { id: 'lose_fat', label: 'Lose Fat', icon: '🔥' },
@@ -52,23 +53,34 @@ export default function SetupScreen() {
   };
 
   const handleFinish = async () => {
-    if (!session?.user?.id) return;
     setSaving(true);
     try {
-      await updateProfile(session.user.id, {
-        fitness_level: level as any,
+      // Get fresh session in case it wasn't available at render time
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || session?.user?.id;
+
+      if (!userId) {
+        // No session yet -- just skip to home, profile will be updated later
+        router.replace('/(home)');
+        return;
+      }
+
+      await updateProfile(userId, {
+        fitness_level: level as any || undefined,
         gender: gender || undefined,
         height_cm: heightCm ? parseFloat(heightCm) : undefined,
         weight_kg: weightKg ? parseFloat(weightKg) : undefined,
         date_of_birth: dob || undefined,
         unit_system: unitSystem,
-        bio: selectedGoals.join(', '),
+        bio: selectedGoals.length > 0 ? selectedGoals.join(', ') : undefined,
         onboarding_completed: true,
       });
       await refreshProfile();
       router.replace('/(home)');
-    } catch (err) {
-      Alert.alert('Error', 'Failed to save profile. Try again.');
+    } catch (err: any) {
+      console.error('Setup error:', err);
+      // Still navigate home even if profile update fails
+      router.replace('/(home)');
     } finally {
       setSaving(false);
     }

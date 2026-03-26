@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import SetRow from '~/src/modules/workouts/components/SetRow';
 import SessionTimer from '~/src/modules/workouts/components/SessionTimer';
 import RestTimer from '~/src/modules/workouts/components/RestTimer';
+import ExercisePickerModal from '~/src/modules/workouts/components/ExercisePickerModal';
 import { useWorkoutSessionStore } from '~/src/modules/workouts/store/workoutSessionStore';
 import { saveCompletedSession } from '~/src/modules/workouts/api/sessions';
 import { useSession } from '~/src/modules/auth/hooks/useSession';
@@ -28,6 +29,7 @@ export default function ActiveSessionScreen() {
   const { activeSession, elapsedSeconds } = store;
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
@@ -221,10 +223,31 @@ export default function ActiveSessionScreen() {
           )}
         />
 
+        {/* Add exercise floating button */}
+        <Pressable
+          onPress={() => setShowExercisePicker(true)}
+          className="absolute bottom-24 right-4 h-14 w-14 items-center justify-center rounded-full bg-green-600 shadow-lg">
+          <FontAwesome name="plus" size={20} color="white" />
+        </Pressable>
+
         {/* Rest timer overlay */}
         {showRestTimer && (
           <RestTimer initialSeconds={90} onDismiss={() => setShowRestTimer(false)} />
         )}
+
+        {/* Exercise picker modal */}
+        <ExercisePickerModal
+          visible={showExercisePicker}
+          onClose={() => setShowExercisePicker(false)}
+          onSelect={(exercise) => {
+            store.addExercise(exercise.id, exercise.name);
+            // Scroll to the new exercise
+            setTimeout(() => {
+              const newIndex = (activeSession?.exercises.length || 1) - 1;
+              scrollToExercise(newIndex);
+            }, 100);
+          }}
+        />
       </SafeAreaView>
     </View>
   );

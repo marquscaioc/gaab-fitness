@@ -43,7 +43,7 @@ export default function SignUpScreen() {
       if (signUpError) {
         setError(signUpError.message);
       } else {
-        router.replace('/(home)');
+        router.replace('/(auth)/setup');
       }
     } catch (err: any) {
       setError(err.message || 'Sign up failed.');

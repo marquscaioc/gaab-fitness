@@ -37,6 +37,9 @@ export default function SocialTab() {
                 </View>
               )}
             </Pressable>
+            <Pressable onPress={() => router.push('/social/create-challenge')}>
+              <FontAwesome name="trophy" size={20} color="#9ca3af" />
+            </Pressable>
             <Pressable onPress={() => router.push('/social/friends')}>
               <FontAwesome name="user-plus" size={20} color="#9ca3af" />
             </Pressable>

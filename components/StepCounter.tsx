@@ -1,7 +1,5 @@
-import { Pedometer } from 'expo-sensors';
 import { useEffect, useState } from 'react';
 import { View, Platform, Text } from 'react-native';
-import AppleHealthKit, { HealthInputOptions, HealthKitPermissions } from 'react-native-health';
 
 import CircularProgress from './ProgressCircle';
 import { useSession } from '~/src/modules/auth/hooks/useSession';
@@ -24,31 +22,39 @@ export default function StepCounter() {
   }, [steps]);
 
   useEffect(() => {
+    // Web: step counting not available
+    if (Platform.OS === 'web') return;
+
     if (Platform.OS === 'android') {
-      const subscription = Pedometer.watchStepCount((result) => {
+      const { Pedometer } = require('expo-sensors');
+      const subscription = Pedometer.watchStepCount((result: any) => {
         setSteps(result.steps);
       });
-
       return () => subscription && subscription.remove();
-    } else {
-      const permissions: HealthKitPermissions = {
-        permissions: {
-          read: [AppleHealthKit.Constants.Permissions.StepCount],
-          write: [],
-        },
-      };
+    }
 
-      AppleHealthKit.initHealthKit(permissions, (error) => {
-        if (error) return console.log('HealthKit initialization failed:', error);
-
-        const options: HealthInputOptions = {
-          startDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+    if (Platform.OS === 'ios') {
+      try {
+        const AppleHealthKit = require('react-native-health').default;
+        const permissions = {
+          permissions: {
+            read: [AppleHealthKit.Constants.Permissions.StepCount],
+            write: [],
+          },
         };
 
-        AppleHealthKit.getStepCount(options, (err, results) => {
-          if (!err) setSteps(results.value);
+        AppleHealthKit.initHealthKit(permissions, (error: any) => {
+          if (error) return;
+          const options = {
+            startDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+          };
+          AppleHealthKit.getStepCount(options, (err: any, results: any) => {
+            if (!err) setSteps(results.value);
+          });
         });
-      });
+      } catch {
+        // HealthKit not available
+      }
     }
   }, []);
 
@@ -62,7 +68,7 @@ export default function StepCounter() {
         color="red"
       />
       <Text className="text-center text-white">
-        {steps} / {goal}
+        {Platform.OS === 'web' ? 'N/A on web' : `${steps} / ${goal}`}
       </Text>
     </View>
   );

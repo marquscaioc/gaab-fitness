@@ -120,6 +120,14 @@ export default function Profile() {
           </View>
 
           <View style={styles.buttonContainer}>
+            <Button
+              title="Health Metrics (BMI/BMR)"
+              onPress={() => router.push('/(home)/bmi')}
+              className="mx-5 bg-blue-600"
+            />
+          </View>
+
+          <View style={styles.buttonContainer}>
             <Button title="Delete Account" onPress={handleDeleteUser} className="mx-5 bg-red-500" />
           </View>
         </View>

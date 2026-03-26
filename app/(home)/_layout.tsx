@@ -66,6 +66,12 @@ export default function HomeLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={25} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="bmi"
+        options={{
+          href: null, // Hidden from tab bar, accessible via router.push
+        }}
+      />
     </Tabs>
   );
 }
